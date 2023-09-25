@@ -1,0 +1,328 @@
+// Luca Marinelli, Matthew Andris, Labib Hossain
+/*
+Input:
+  - choice of seeing rules, playing games, or quiting
+  - the next location of ranger
+  - choice of fighting or waiting for danger to leave
+Processing:
+  - where the dangers will be located (random)
+  - number of gongs left
+  - whether the user landed on danger or not
+  - determine if user won or lost the fight if fight was chosen (random)
+  - determine if user has reached the toursist in time
+Output:
+  - display "1. See Rules, 2. Play game, 3. Quit"
+  - If 1. was selected display the rules
+  - If 2. was selected:
+  - display the grid: where the ranger, tourist, or dangers (if they have been landed on)
+  - display the user to watch out if they land on a danger
+  - display the user to choose their next move 1. wait, 2. fight
+  - display whether the user made it to tourist in time without losing all gongs
+  - If 3. was selected display goodbye and leave
+*/
+#include <iostream>
+#include <iomanip>
+#include <stdlib.h>
+#include <string>
+using namespace std;
+
+// Function Prototypes
+void starterMenu();
+void playGame();
+void danger();
+void next(int arr[], int& currentX, int& currentY);
+void displayMap(int gongs);
+void decide(int decision, int animal, int arr[], int previousX, int previousY, int& currentX, int& currentY, int& gongs);
+void advance(int arr[], int previousX, int previousY, int& currentX, int& currentY, int& gongs);
+bool touristCheck(int currentX, int currentY);
+void outOfGongs(int gongs);
+void seeRules();
+
+char map[5][5] = { {'R','*','*','*','*'}, {'*','*','*','*','*'}, {'*','*','*','*','*'}, {'*','*','*','*','*'}, {'*','*','*','*', 'T'} };
+char shadowMap[5][5] = { {'R','*','*','*','*'}, {'*','*','*','*','*'}, {'*','*','*','*','*'}, {'*','*','*','*','*'}, {'*','*','*','*', 'T'} };
+
+int main()
+{
+    int choice;
+    // Menu-Driven Do-While loop
+    do {
+
+        starterMenu(); // Calling Starting Menu Function
+        cout << "\nChoice: ";
+        cin >> choice;
+
+        // Making sure the user gives an answer in between 1 and 3. 
+        while (choice < 1 || choice > 3) {
+            cout << "Try again ... Select a number 1 - 3" << endl;
+            starterMenu();
+            cout << "\nChoice: ";
+            cin >> choice;
+        }
+
+        // The switch statement tells the program what to do determining on what the user selected.
+        switch (choice)
+        {
+        case 1: // See Rules
+            seeRules();
+            break;
+        case 2: // Play Game
+            playGame();
+            break;
+        case 3: // Quit
+            cout << "Good Bye";
+            break;
+        }
+
+
+    } while (choice != 3); // Do this (above) while the user does not choose to quit.
+
+    return 0;
+}
+
+void starterMenu() {
+    // Gives the user three options to either see rules, start the game, or quit.
+    cout << "\t1. See Rules." << endl;
+    cout << "\t2. Play game." << endl;
+    cout << "\t3. Quit" << endl;
+}
+
+void seeRules() {
+    // When the user selects see rules, these rules will appear.
+    cout << "\n - Lost in the Everglades in an RPG (Role-Playing-Game) between a player and the computer." << endl
+        << " - A group of tourists has been lost in the Everglades and a ranger must rescue them before time runs out." << endl << " - The Everglades are represented by a 5x5 matrix." << endl << " - The ranger(R) starts the rescue at the upper - left corner of the park, the group of tourists(T) are lost at the lower right corner." << endl << " - The ranger has 12 gongs of time to find and rescue the tourists before they perish." << endl
+        << " - During the journey, the ranger might find dangers(hungry alligator, swarm of giant mosquitoes, venomous spider, or python)." << endl
+        << " - When the ranger finds a danger, they can choose to fight them, or hide and wait for them to leave." << endl;
+    cout << " --> If the Ranger waits:" << endl << "\tMoves to the desired cell" << endl << "\tLoses 5 gongs of time" << endl;
+    cout << " --> If the Ranger fights and wins:" << endl << "\tMoves to the desired cell" << endl << "\tLoses 2 gongs of time" << endl;
+    cout << " --> If the Ranger fights and loses:" << endl << "\tGoes back to the initial cell" << endl << "\tLoses 3 gongs of time" << endl << "\tThe danger remains in the cell" << endl;
+    cout << " --> The game ends when either:" << endl << "\tThe ranger rescues the group of tourists." << endl << "\tThe time expires and the fate of the tourists is forever unknown." << endl << endl;
+}
+
+void playGame() {
+    // When the user selects play game, this function will start
+    bool game = true; // Sets game for true (this is so we can set the while-loop)
+    int gongs = 12; // Sets gongs to 12
+    // This nested for loop resets the map array if user decides to play for a second time back-to-back
+    for (int count = 0; count < 5; count++) {
+        for (int count2 = 0; count2 < 5; count2++) {
+            if (count == 0 && count2 == 0) {
+                map[count][count2] = 'R';
+            }
+            else if (count == 4 && count2 == 4) {
+                map[count][count2] = 'T';
+            }
+            else {
+                map[count][count2] = '*';
+            }
+        }
+    }
+    int nextInput[2]; // This array consists of the two coordinates where the user wants to move
+    int currentX = 0; // This variable will be used to set where the user's X-coordinates currently are. 
+    int currentY = 0; // This variable will be used to set where the user's Y-coordinates currently are. 
+    int previousX = 0; // This variable will be used to set where the user's X-coordinates previously were. 
+    int previousY = 0; // This variable will be used to set where the user's Y-coordinates previously were. 
+    danger(); // This function calls the dangers to be randomly assigned on the shadowMap[] and map[].
+    do {
+        displayMap(gongs); // Displays the map
+        next(nextInput, currentX, currentY); // Asks the user for their next move
+        advance(nextInput, previousX, previousY, currentX, currentY, gongs); // Moves the user
+        game = touristCheck(currentX, currentY); // Checks if user reached the coordinates (4,4)
+        outOfGongs(gongs); // Checks if user is out of gongs
+        previousX = currentX; // Sets previousX to the next previousX
+        previousY = currentY; // Sets previousY to the next previousY
+    } while (game == true && gongs > 0);
+
+
+
+
+
+}
+
+
+void displayMap(int gongs) {
+    // Displays the map
+    cout << "  0 1 2 3 4" << endl;
+    int num = 0;
+    for (int count = 0; count < 5; count++) {
+        cout << num << " ";
+        num += 1;
+        for (int count2 = 0; count2 < 5; count2++) {
+
+            cout << map[count][count2];
+            cout << ' ';
+        }
+        cout << endl;
+
+    }
+
+    cout << "\nGongs Left: " << gongs << endl << endl; // Displays the gongs left
+
+}
+
+
+
+void next(int arr[], int& currentX, int& currentY) {
+    // Asks the user for next position
+    cout << "Enter next cell: " << endl;
+    cout << "Row: ";
+    cin >> arr[0];
+    cout << "Column: ";
+    cin >> arr[1];
+
+    // While the coordinates are not too far away, equal to each other, or out of range of 0-4.
+    while ((arr[0] > (currentX + 1) || arr[0] < (currentX - 1) || arr[1] > (currentY + 1) || arr[1] < (currentY - 1)) || (arr[0] == currentX && arr[1] == currentY) || (arr[0] > 4 || arr[1] > 4 || arr[0] < 0 || arr[1] < 0)) {
+        if (arr[0] == currentX && arr[1] == currentY) {
+            cout << "\nYou are already at this location. Move ... Try again." << endl;
+        }
+        if (arr[0] > (currentX + 1) || arr[0] < (currentX - 1) || arr[1] > (currentY + 1) || arr[1] < (currentY - 1)) {
+            cout << "\nYou are too far away from there . No Skipping ... Try again." << endl;
+        }
+        if (arr[0] > 4 || arr[1] > 4 || arr[0] < 0 || arr[1] < 0) {
+            cout << "\nStay in the range of the grid ... Try again." << endl;
+        }
+        cout << "Enter next cell: " << endl;
+        cout << "Row: ";
+        cin >> arr[0];
+        cout << "Column: ";
+        cin >> arr[1];
+    };
+
+    // Puts an R where the ranger is currently located
+    map[arr[0]][arr[1]] = 'R';
+    // Puts a space where the ranger previously was
+    map[currentX][currentY] = ' ';
+    // Assigns the new location of the ranger to currentX and currentY for the next iteration
+    currentX = arr[0];
+    currentY = arr[1];
+}
+
+void advance(int arr[], int previousX, int previousY, int& currentX, int& currentY, int& gongs) {
+    // Moves the User
+    int decision; // The variable that identifies whether to choose whether to fight or stay
+    // These if-else statements identify where if the user landed on a danger in map[].
+    if (shadowMap[arr[0]][arr[1]] == 'A') {
+        cout << "\n---> Watch out! There is a Hungry Alligator ahead!" << endl;
+        map[arr[0]][arr[1]] = 'A';
+        cout << "\nChoose your next move" << endl << "\t1. Wait until it leaves." << endl << "\t2. Fight it." << endl << "Move: ";
+        cin >> decision;
+        while (decision < 1 || decision > 2) { // Makes sure user selects a number from 1-2
+            cout << "\nError ... invalid number ... " << endl << "Choose your next move (1 - 2) " << endl << "\t1.Wait until it leaves." << endl << "\t2.Fight it." << endl << "Move: ";
+            cin >> decision;
+        }
+        decide(decision, 0, arr, previousX, previousY, currentX, currentY, gongs);
+    }
+    else if (shadowMap[arr[0]][arr[1]] == 'M') {
+        cout << "\n---> Watch out! There is a Swarm of Giant Mosquitoes ahead!" << endl;
+        map[arr[0]][arr[1]] = 'M';
+        cout << "\nChoose your next move" << endl << "\t1. Wait until it leaves." << endl << "\t2. Fight it." << endl << "Move: ";
+        cin >> decision;
+        while (decision < 1 || decision > 2) { // Makes sure user selects a number from 1-2
+            cout << "\nError ... invalid number ... " << endl << "Choose your next move (1 - 2) " << endl << "\t1.Wait until it leaves." << endl << "\t2.Fight it." << endl << "Move: ";
+            cin >> decision;
+        }
+        decide(decision, 1, arr, previousX, previousY, currentX, currentY, gongs);
+    }
+    else if (shadowMap[arr[0]][arr[1]] == 'S') {
+        cout << "\n---> Watch out! There is a Venomous Spiders ahead!" << endl;
+        map[arr[0]][arr[1]] = 'S';
+        cout << "\nChoose your next move" << endl << "\t1. Wait until it leaves." << endl << "\t2. Fight it." << endl << "Move: ";
+        cin >> decision;
+        while (decision < 1 || decision > 2) { // Makes sure user selects a number from 1-2
+            cout << "\nError ... invalid number ... " << endl << "Choose your next move (1 - 2) " << endl << "\t1.Wait until it leaves." << endl << "\t2.Fight it." << endl << "Move: ";
+            cin >> decision;
+        }
+        decide(decision, 2, arr, previousX, previousY, currentX, currentY, gongs);
+    }
+    else if (shadowMap[arr[0]][arr[1]] == 'P') {
+        cout << "\n---> Watch out! There is a Python ahead!" << endl;
+        map[arr[0]][arr[1]] = 'P';
+        cout << "\nChoose your next move" << endl << "\t1. Wait until it leaves." << endl << "\t2. Fight it." << endl << "Move: ";
+        cin >> decision;
+        while (decision < 1 || decision > 2) { // Makes sure user selects a number from 1-2
+            cout << "\nError ... invalid number ... " << endl << "Choose your next move (1 - 2) " << endl << "\t1.Wait until it leaves." << endl << "\t2.Fight it." << endl << "Move: ";
+            cin >> decision;
+        }
+        decide(decision, 3, arr, previousX, previousY, currentX, currentY, gongs);
+    }
+    else {
+        cout << "\n---> Cell (" << arr[0] << ", " << arr[1] << ") is Free ... You Advance!" << endl;
+        gongs -= 1;
+    }
+
+
+}
+
+void decide(int decision, int animal, int arr[], int previousX, int previousY, int& currentX, int& currentY, int& gongs) {
+    // If the user decides to fight the danger this function will be the randomized outcome.
+    string dangerName[] = { "hungry alligator", "swarm of giant mosquitoes", "venomous spider", "python" }; // Initializes and defines the dangers in an array so that they can be named in the program. 
+    if (decision == 2) {
+        int num;
+        num = rand() % 2 + 1; // Randomization outcome
+        if (num == 2) {
+            cout << "\n---> You fight the " << dangerName[animal] << " and win ... You Advance!" << endl;
+            map[arr[0]][arr[1]] = 'R';
+            gongs -= 2; // subtracts 2 from gongs left
+        }
+        else if (num == 1) {
+            cout << "\n---> You fight the " << dangerName[animal] << " and lose ... Retreat." << endl;
+            map[previousX][previousY] = 'R';
+            gongs -= 3; // subtracts 3 from gongs left
+            currentX = previousX; // Moves the user's X back because the user lost
+            currentY = previousY; // Moves the user's Y back because the user lost
+        }
+    }
+    else if (decision == 1) {
+        gongs -= 5; // subtracts 5 from gongs left
+    }
+}
+
+void danger() {
+    // Defines where the dangers will be placed on the map. 
+    int num1 = 0;
+    int num2 = 0;
+    int danger = 0;
+    int max = 5;
+    int maxDanger = 4;
+    // Assigning random item in array to a danger
+    char dangerFill[] = { 'M', 'A', 'P', 'S' };
+    for (int i = 1; i <= 10; i++) {
+        // Identifying where to place the danger
+        num1 = rand() % max;
+        num2 = rand() % max;
+        // Identifying which danger is selected
+        danger = rand() % maxDanger;
+        while (shadowMap[num1][num2] == 'M' || shadowMap[num1][num2] == 'A' || shadowMap[num1][num2] == 'P' || shadowMap[num1][num2] == 'S') {
+            num1 = rand() % max;
+            num2 = rand() % max;
+        }
+        shadowMap[num1][num2] = dangerFill[danger]; // Puts the danger on the shadowMap
+    }
+}
+
+bool touristCheck(int x, int y) {
+    // Checks whether the user made it to the tourist.
+    if (x == 4 && y == 4) {
+        cout << "\nCongrats! You made it to the tourists in time!" << endl;
+        return false;
+    }
+    else {
+        return true;
+    };
+};
+
+void outOfGongs(int gongs) {
+    // Checks whether the user ran out of gongs.
+    if (gongs <= 0) {
+        cout << "\nYou have ran out of gongs! Thanks for playing." << endl << endl;
+    }
+}
+
+/*
+    Program Requirements:
+
+    ~ Atleast four different functions besides main().
+    ~ Appropriate comments throughout the code that highlight, among other things, the implementation of the algorithm.
+    ~ Map is a 5x5 dimensional array.
+    ~ No global variables can be used. (-50 points)
+    ~ Parallel arrays should be used to relate data.
+*/
